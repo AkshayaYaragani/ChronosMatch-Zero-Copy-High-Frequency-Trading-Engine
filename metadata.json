@@ -1,0 +1,6 @@
+{
+  "name": "ChronosMatch: Zero-Copy High-Frequency Trading Engine",
+  "description": "Ultra-low-latency financial matching engine built with zero-copy memory-mapped IPC, sub-50 microsecond execution, lock-free ring buffers, Cython C-extension LOB, and live telemetry terminal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
