@@ -134,3 +134,13 @@ python3 --version
 
 If only `python` works on Windows, update the Python executable name used by
 the server as described above, then restart the development server.
+
+Week 1 Progress
+
+I reviewed the ChronosMatch project README and explored its setup instructions. I learned about the purpose of a limit order book matching engine and the importance of low-latency processing.
+
+Learning Outcomes
+
+- Understood the project overview.
+- Reviewed the local setup instructions.
+- Learned the basic concepts of high-frequency trading.
