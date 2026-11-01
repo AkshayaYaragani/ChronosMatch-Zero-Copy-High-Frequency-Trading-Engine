@@ -31,6 +31,14 @@
   background: #363c4e;
 }
 
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Institutional Terminal Scrollbars - Light */
 html.light ::-webkit-scrollbar-track {
   background: #f1f5f9;

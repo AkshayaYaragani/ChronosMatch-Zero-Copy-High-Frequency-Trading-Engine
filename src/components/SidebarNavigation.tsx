@@ -179,6 +179,51 @@ const NAV_ITEMS: NavItem[] = [
   }
 ];
 
+interface MobileTabBarProps {
+  activeTab: NavTabId;
+  onSelectTab: (id: NavTabId) => void;
+}
+
+export const MobileTabBar: React.FC<MobileTabBarProps> = ({ activeTab, onSelectTab }) => {
+  const { isDark } = useTheme();
+
+  return (
+    <nav
+      aria-label="Mobile workspace tabs"
+      className={`flex md:hidden w-full shrink-0 overflow-x-auto border-b px-2 py-1.5 scrollbar-none ${
+        isDark ? 'border-[#242b3a] bg-[#10141f]' : 'border-slate-200 bg-slate-50'
+      }`}
+    >
+      <div className="flex min-w-max gap-1">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive = item.id === activeTab;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSelectTab(item.id)}
+              aria-current={isActive ? 'page' : undefined}
+              className={`flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[10px] font-bold uppercase tracking-wide transition ${
+                isActive
+                  ? isDark
+                    ? 'border-[#485b7e] bg-[#1b2537] text-slate-100'
+                    : 'border-slate-300 bg-white text-slate-900 shadow-sm'
+                  : isDark
+                  ? 'border-transparent text-[#8ca0b4] hover:bg-[#161c28]'
+                  : 'border-transparent text-slate-600 hover:bg-white'
+              }`}
+            >
+              <Icon className={`h-3.5 w-3.5 ${isActive ? item.color : ''}`} />
+              <span>{item.shortLabel}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+};
+
 interface SidebarNavigationProps {
   activeTab: NavTabId;
   onSelectTab: (id: NavTabId) => void;
@@ -264,7 +309,7 @@ export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
       </div>
 
       {/* Main Navigation Segment Items */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-4 no-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-4 no-scrollbar">
         {categories.map((cat) => {
           const items = NAV_ITEMS.filter((i) => i.category === cat);
           return (

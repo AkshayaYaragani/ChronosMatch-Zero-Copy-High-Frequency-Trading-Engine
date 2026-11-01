@@ -26,7 +26,7 @@ import { HotkeyModal } from './components/HotkeyModal';
 import { QuantRAGStudio } from './components/QuantRAGStudio';
 import { PaperTradingDashboard } from './components/PaperTradingDashboard';
 import { audioEngine } from './utils/audioEngine';
-import { SidebarNavigation, NavTabId } from './components/SidebarNavigation';
+import { MobileTabBar, SidebarNavigation, NavTabId } from './components/SidebarNavigation';
 import { testConnection, auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useTheme } from './context/ThemeContext';
@@ -366,6 +366,8 @@ export default function App() {
         user={user}
       />
 
+      <MobileTabBar activeTab={activeTab} onSelectTab={setActiveTab} />
+
       {/* Floating Hotkey HUD Toast */}
       {hotkeyToast && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-[#1c2436] border border-[#5b9a78] text-slate-100 font-mono text-xs font-bold shadow-2xl flex items-center gap-2 animate-bounce">
@@ -375,7 +377,7 @@ export default function App() {
       )}
 
       {/* Main Workstation Workspace: Left Sidebar + Right Content Board */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left Segment Sidebar Panel */}
         <SidebarNavigation
           activeTab={activeTab}
@@ -392,7 +394,7 @@ export default function App() {
         />
 
         {/* Right Dashboard Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           {/* Active Segment Breadcrumb & Quick Status Header */}
           <div
             className={`border-b px-3 sm:px-5 py-2 flex items-center justify-between text-xs sticky top-0 z-10 backdrop-blur shrink-0 ${
@@ -442,7 +444,7 @@ export default function App() {
           </div>
 
           {/* Main Content Area */}
-          <main className="w-full p-2.5 sm:p-4 flex-1 max-w-[1600px] mx-auto">
+          <main className="mx-auto w-full max-w-[1600px] flex-1 p-2 sm:p-4">
         {/* Flash Whale Sweep Alert Banner */}
         <WhaleBanner alerts={whaleAlerts} />
 
