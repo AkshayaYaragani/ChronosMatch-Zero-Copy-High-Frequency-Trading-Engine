@@ -75,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
           : 'border-slate-200 bg-white/95 text-slate-800 shadow-xs'
       }`}
     >
-      <div className="w-full px-1 sm:px-2 flex flex-col lg:flex-row items-center justify-between gap-3">
+      <div className="w-full px-1 sm:px-2 flex flex-col lg:flex-row items-center justify-between gap-3 lg:gap-4">
         {/* Title, Sidebar Toggle, and Status */}
         <div className="flex items-center justify-between w-full lg:w-auto gap-3">
           <div className="flex items-center gap-2">
@@ -177,57 +177,57 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Real-time Throughput Counters */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full lg:w-auto text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full lg:w-[452px] shrink-0 text-xs">
           <div
-            className={`border rounded px-2.5 py-1.5 transition-colors ${
+            className={`h-[42px] min-w-0 border rounded px-2.5 py-1.5 transition-colors ${
               isDark ? 'bg-[#1c2030] border-[#2a2e39]' : 'bg-slate-50 border-slate-200'
             }`}
           >
             <span className="text-[9px] text-[#64748b] uppercase tracking-wider block">Ingest Speed</span>
-            <span className="text-xs sm:text-sm font-bold font-mono">
+            <span className="block truncate text-xs sm:text-sm font-bold font-mono tabular-nums">
               {(ingestTps || 0).toLocaleString()} <span className="text-[9px] text-[#64748b] font-normal">ord/s</span>
             </span>
           </div>
 
           <div
-            className={`border rounded px-2.5 py-1.5 transition-colors ${
+            className={`h-[42px] min-w-0 border rounded px-2.5 py-1.5 transition-colors ${
               isDark ? 'bg-[#1c2030] border-[#2a2e39]' : 'bg-slate-50 border-slate-200'
             }`}
           >
             <span className="text-[9px] text-[#64748b] uppercase tracking-wider block">Match Speed</span>
-            <span className={`text-xs sm:text-sm font-bold font-mono ${isDark ? 'text-[#7da98f]' : 'text-emerald-700'}`}>
+            <span className={`block truncate text-xs sm:text-sm font-bold font-mono tabular-nums ${isDark ? 'text-[#7da98f]' : 'text-emerald-700'}`}>
               {(matchTps || 0).toLocaleString()} <span className="text-[9px] text-[#64748b] font-normal">match/s</span>
             </span>
           </div>
 
           <div
-            className={`border rounded px-2.5 py-1.5 transition-colors ${
+            className={`h-[42px] min-w-0 border rounded px-2.5 py-1.5 transition-colors ${
               isDark ? 'bg-[#1c2030] border-[#2a2e39]' : 'bg-slate-50 border-slate-200'
             }`}
           >
             <span className="text-[9px] text-[#64748b] uppercase tracking-wider block">Total Ingested</span>
-            <span className="text-xs sm:text-sm font-bold font-mono">
+            <span className="block truncate text-xs sm:text-sm font-bold font-mono tabular-nums">
               {(totalIngested || 0).toLocaleString()}
             </span>
           </div>
 
           <div
-            className={`border rounded px-2.5 py-1.5 transition-colors ${
+            className={`h-[42px] min-w-0 border rounded px-2.5 py-1.5 transition-colors ${
               isDark ? 'bg-[#1c2030] border-[#2a2e39]' : 'bg-slate-50 border-slate-200'
             }`}
           >
             <span className="text-[9px] text-[#64748b] uppercase tracking-wider block">Total Matched</span>
-            <span className="text-xs sm:text-sm font-bold font-mono">
+            <span className="block truncate text-xs sm:text-sm font-bold font-mono tabular-nums">
               {(totalMatched || 0).toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* Control Actions */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full lg:w-auto justify-end">
+        <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 w-full lg:w-auto justify-end overflow-x-auto lg:overflow-visible">
           {/* Rate Selector */}
           <div
-            className={`flex items-center gap-1 border rounded p-1 text-xs ${
+            className={`flex h-[32px] shrink-0 items-center gap-1 border rounded p-1 text-xs whitespace-nowrap ${
               isDark ? 'bg-[#1c2030] border-[#2a2e39]' : 'bg-slate-50 border-slate-200'
             }`}
           >
@@ -252,7 +252,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Earnings Shockwave Button */}
           <button
             onClick={onToggleBurst}
-            className={`flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded text-[11px] sm:text-xs font-semibold tracking-wide border transition-all ${
+            className={`flex h-[32px] w-[116px] shrink-0 items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded text-[11px] sm:text-xs font-semibold tracking-wide border transition-all ${
               burstMode
                 ? 'bg-rose-900/60 text-rose-200 border-rose-700 animate-pulse'
                 : isDark
@@ -269,7 +269,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Inject Whale Sweep Button */}
           <button
             onClick={onInjectWhale}
-            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded text-[11px] sm:text-xs font-semibold tracking-wide border transition-all shadow-xs ${
+            className={`flex h-[32px] w-[112px] shrink-0 items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded text-[11px] sm:text-xs font-semibold tracking-wide border transition-all shadow-xs ${
               isDark
                 ? 'bg-[#2a3444] text-[#a4b8cc] border-[#3d4b60] hover:bg-[#344054] hover:text-slate-100'
                 : 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
@@ -284,7 +284,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Start/Pause Engine */}
           <button
             onClick={onToggleEngine}
-            className={`p-2 rounded text-xs font-bold border transition-all ${
+            className={`flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded text-xs font-bold border transition-all ${
               isRunning
                 ? isDark
                   ? 'bg-[#1c2030] border-[#2a2e39] text-[#b95353] hover:bg-[#251f22]'
@@ -302,7 +302,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onOpenLogin && (
             <button
               onClick={onOpenLogin}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold border transition ${
+              className={`flex h-[32px] w-[132px] shrink-0 items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-semibold border transition ${
                 user
                   ? isDark
                     ? 'bg-[#1a2820] border-[#3d5e4d] text-[#7da98f]'
@@ -327,7 +327,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onReplaySplash && (
             <button
               onClick={onReplaySplash}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-semibold border transition ${
+              className={`flex h-[32px] shrink-0 items-center gap-1.5 px-2 py-1.5 rounded text-xs font-semibold border transition ${
                 isDark
                   ? 'bg-[#1c2030] border-[#2a2e39] text-[#8ca0b4] hover:bg-[#252d42] hover:text-slate-100'
                   : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
@@ -343,7 +343,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onToggleAudio && (
             <button
               onClick={onToggleAudio}
-              className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-semibold border transition ${
+              className={`flex h-[32px] shrink-0 items-center gap-1.5 px-2 py-1.5 rounded text-xs font-semibold border transition ${
                 isDark
                   ? isAudioMuted
                     ? 'bg-[#1c2030] border-[#2a2e39] text-[#64748b] hover:text-slate-200'
