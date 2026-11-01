@@ -104,6 +104,9 @@ submissions.
 Paper orders are intentionally isolated from the Python matching engine and
 from all broker/exchange integrations. They never represent real-money
 execution. Resetting the desk clears its virtual account and order history.
+The desk also provides searchable and status-filtered order history, fill and
+rejection summary metrics, and an **EXPORT CSV** action for offline review or
+strategy analysis.
 
 If port 3000 is already being used, the server automatically tries the next
 available port and prints the actual URL in the terminal.

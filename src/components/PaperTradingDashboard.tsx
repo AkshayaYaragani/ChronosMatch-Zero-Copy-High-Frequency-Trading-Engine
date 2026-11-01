@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Play, RefreshCw, ShieldCheck, Square, TrendingDown, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Download, Play, RefreshCw, Search, ShieldCheck, Square, TrendingDown, TrendingUp } from 'lucide-react';
 import { apiUrl } from '../api';
 
 interface PaperState {
@@ -11,11 +11,12 @@ interface PaperState {
   killSwitch: boolean;
   quote: { symbol: string; bid: number; ask: number; last: number } | null;
   limits: { maxOrderQuantity: number; maxOrderNotional: number; maxPositionQuantity: number; maxDailyLoss: number };
-  orders: Array<{ id: string; symbol: string; side: string; type: string; quantity: number; filledQuantity: number; averageFillPrice: number; status: string; rejectReason?: string }>;
+  orders: Array<{ id: string; symbol: string; side: string; type: string; quantity: number; filledQuantity: number; averageFillPrice: number; status: string; rejectReason?: string; createdAt: string }>;
   positions: Array<{ symbol: string; quantity: number; averagePrice: number; marketPrice: number; marketValue: number; unrealizedPnl: number }>;
 }
 
 const money = (value: number) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const csvCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
 
 export const PaperTradingDashboard: React.FC = () => {
   const [state, setState] = useState<PaperState | null>(null);
@@ -25,6 +26,8 @@ export const PaperTradingDashboard: React.FC = () => {
   const [limitPrice, setLimitPrice] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [orderFilter, setOrderFilter] = useState<'ALL' | 'FILLED' | 'OPEN' | 'REJECTED' | 'CANCELLED'>('ALL');
+  const [orderSearch, setOrderSearch] = useState('');
 
   const load = async () => {
     const response = await fetch(apiUrl('/api/paper/state'));
@@ -81,7 +84,46 @@ export const PaperTradingDashboard: React.FC = () => {
     setMessage('Paper account reset to $100,000');
   };
 
+  const filteredOrders = state?.orders.filter((order) => {
+    const matchesStatus = orderFilter === 'ALL' || order.status === orderFilter;
+    const search = orderSearch.trim().toLowerCase();
+    const matchesSearch = !search ||
+      order.id.toLowerCase().includes(search) ||
+      order.symbol.toLowerCase().includes(search) ||
+      order.side.toLowerCase().includes(search) ||
+      order.status.toLowerCase().includes(search);
+    return matchesStatus && matchesSearch;
+  }) || [];
+
+  const exportOrders = () => {
+    const header = ['ID', 'Created At', 'Symbol', 'Side', 'Type', 'Quantity', 'Filled Quantity', 'Average Fill Price', 'Status', 'Reject Reason'];
+    const rows = filteredOrders.map((order) => [
+      order.id,
+      order.createdAt,
+      order.symbol,
+      order.side,
+      order.type,
+      order.quantity,
+      order.filledQuantity,
+      order.averageFillPrice || '',
+      order.status,
+      order.rejectReason || ''
+    ]);
+    const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `chronos-paper-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (!state) return <div className="p-6 text-sm text-[#8ca0b4]">Loading paper account...</div>;
+
+  const filledOrders = state.orders.filter((order) => order.status === 'FILLED');
+  const fillRate = state.orders.length ? Math.round((filledOrders.length / state.orders.length) * 100) : 0;
+  const rejectedOrders = state.orders.filter((order) => order.status === 'REJECTED').length;
 
   return (
     <div className="space-y-4 font-mono">
@@ -139,8 +181,31 @@ export const PaperTradingDashboard: React.FC = () => {
       </div>
 
       <div className="rounded-lg border border-[#2a2e39] bg-[#1c2030] p-4">
-        <h3 className="mb-3 text-xs font-bold text-slate-100">RECENT PAPER ORDERS</h3>
-        <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="text-[10px] uppercase text-[#64748b]"><tr><th className="pb-2">ID</th><th className="pb-2">Side</th><th className="pb-2">Qty</th><th className="pb-2">Fill</th><th className="pb-2">Status</th></tr></thead><tbody className="divide-y divide-[#2a2e39]">{state.orders.slice(0, 10).map((order) => <tr key={order.id}><td className="py-2 text-[#8ca0b4]">{order.id}</td><td className={`py-2 font-bold ${order.side === 'BUY' ? 'text-emerald-400' : 'text-red-400'}`}>{order.side}</td><td className="py-2 text-slate-300">{order.quantity}</td><td className="py-2 text-slate-300">{order.averageFillPrice ? money(order.averageFillPrice) : '-'}</td><td className={`py-2 font-bold ${order.status === 'REJECTED' ? 'text-red-400' : order.status === 'FILLED' ? 'text-emerald-400' : 'text-amber-300'}`}>{order.status}{order.rejectReason ? `: ${order.rejectReason}` : ''}</td></tr>)}</tbody></table></div>
+        <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-slate-100">PAPER ORDER HISTORY</h3>
+            <div className="mt-1 text-[10px] text-[#64748b]">{state.orders.length} orders · {fillRate}% filled · {rejectedOrders} rejected</div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <label className="flex items-center gap-2 rounded border border-[#3b455c] bg-[#131722] px-2 text-xs text-[#8ca0b4]">
+              <Search className="h-3.5 w-3.5" />
+              <input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} className="w-32 bg-transparent py-1.5 text-xs text-slate-200 outline-none" placeholder="Search orders" aria-label="Search paper orders" />
+            </label>
+            <select value={orderFilter} onChange={(event) => setOrderFilter(event.target.value as typeof orderFilter)} className="rounded border border-[#3b455c] bg-[#131722] px-2 py-1.5 text-xs text-slate-200" aria-label="Filter paper orders by status">
+              <option value="ALL">ALL STATUS</option>
+              <option value="FILLED">FILLED</option>
+              <option value="OPEN">OPEN</option>
+              <option value="REJECTED">REJECTED</option>
+              <option value="CANCELLED">CANCELLED</option>
+            </select>
+            <button onClick={exportOrders} disabled={filteredOrders.length === 0} className="flex items-center gap-1 rounded border border-emerald-700/60 px-2 py-1.5 text-xs text-emerald-300 disabled:cursor-not-allowed disabled:opacity-40">
+              <Download className="h-3.5 w-3.5" /> EXPORT CSV
+            </button>
+          </div>
+        </div>
+        <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="text-[10px] uppercase text-[#64748b]"><tr><th className="pb-2">ID</th><th className="pb-2">Time</th><th className="pb-2">Symbol</th><th className="pb-2">Side</th><th className="pb-2">Qty</th><th className="pb-2">Fill</th><th className="pb-2">Status</th></tr></thead><tbody className="divide-y divide-[#2a2e39]">{filteredOrders.slice(0, 50).map((order) => <tr key={order.id}><td className="py-2 text-[#8ca0b4]">{order.id}</td><td className="py-2 text-[#8ca0b4]">{new Date(order.createdAt).toLocaleTimeString()}</td><td className="py-2 text-slate-300">{order.symbol}</td><td className={`py-2 font-bold ${order.side === 'BUY' ? 'text-emerald-400' : 'text-red-400'}`}>{order.side}</td><td className="py-2 text-slate-300">{order.quantity}</td><td className="py-2 text-slate-300">{order.averageFillPrice ? money(order.averageFillPrice) : '-'}</td><td className={`py-2 font-bold ${order.status === 'REJECTED' ? 'text-red-400' : order.status === 'FILLED' ? 'text-emerald-400' : 'text-amber-300'}`} title={order.rejectReason}>{order.status}{order.rejectReason ? `: ${order.rejectReason}` : ''}</td></tr>)}</tbody></table></div>
+        {filteredOrders.length === 0 && <div className="py-8 text-center text-xs text-[#64748b]">No orders match the current filters.</div>}
+        {filteredOrders.length > 50 && <div className="mt-3 text-[10px] text-[#64748b]">Showing the latest 50 matching orders. Export CSV includes all matches.</div>}
       </div>
     </div>
   );
