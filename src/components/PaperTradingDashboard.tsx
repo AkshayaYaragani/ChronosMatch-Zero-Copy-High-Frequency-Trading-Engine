@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Download, Play, RefreshCw, Search, ShieldCheck, Square, TrendingDown, TrendingUp } from 'lucide-react';
-import { apiUrl } from '../api';
+import { apiFetch } from '../api';
 
 interface PaperState {
   cash: number;
@@ -30,7 +30,7 @@ export const PaperTradingDashboard: React.FC = () => {
   const [orderSearch, setOrderSearch] = useState('');
 
   const load = async () => {
-    const response = await fetch(apiUrl('/api/paper/state'));
+    const response = await apiFetch('/api/paper/state');
     if (!response.ok) throw new Error('Unable to load paper account');
     setState(await response.json());
   };
@@ -46,7 +46,7 @@ export const PaperTradingDashboard: React.FC = () => {
     setLoading(true);
     setMessage('');
     try {
-      const response = await fetch(apiUrl('/api/paper/orders'), {
+      const response = await apiFetch('/api/paper/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -69,7 +69,7 @@ export const PaperTradingDashboard: React.FC = () => {
   };
 
   const toggleKillSwitch = async () => {
-    await fetch(apiUrl('/api/paper/controls'), {
+    await apiFetch('/api/paper/controls', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ killSwitch: !state?.killSwitch })
@@ -79,7 +79,7 @@ export const PaperTradingDashboard: React.FC = () => {
 
   const reset = async () => {
     if (!window.confirm('Reset the paper account, positions, and order history?')) return;
-    await fetch(apiUrl('/api/paper/reset'), { method: 'POST' });
+    await apiFetch('/api/paper/reset', { method: 'POST' });
     await load();
     setMessage('Paper account reset to $100,000');
   };

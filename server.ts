@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import http from 'http';
 import path from 'path';
 import os from 'os';
@@ -7,6 +7,8 @@ import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
+import { applicationDefault, cert, getApps, initializeApp } from 'firebase-admin/app';
+import { DecodedIdToken, getAuth } from 'firebase-admin/auth';
 import {
   getAllDocuments,
   addDocument,
@@ -28,6 +30,10 @@ const configuredPort = Number.parseInt(process.env.PORT || '3000', 10);
 const PORT = Number.isInteger(configuredPort) && configuredPort > 0 ? configuredPort : 3000;
 const DEFAULT_ENGINE_RATE = 25000;
 const MAX_BENCHMARK_COUNT = 1_000_000;
+const ALLOWED_GEMINI_MODELS = new Set(['gemini-3.8-flash', 'gemini-3.1-flash-lite']);
+const defaultSystemInstruction = `You are Chronos AI, an elite Quantitative Analyst and Ultra-Low-Latency Systems Architect embedded within the ChronosMatch High-Frequency Trading Engine.
+You specialize in HFT, limit order books, zero-copy IPC, low-latency systems, market microstructure, and quantitative risk.
+Give precise, actionable engineering and trading insights.`;
 
 app.use(express.json());
 app.use((req, res, next) => {
@@ -37,7 +43,7 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Vary', 'Origin');
   }
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
@@ -45,6 +51,64 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+let firebaseAuth: ReturnType<typeof getAuth> | null = null;
+try {
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim();
+  const firebaseApp = getApps().length > 0
+    ? getApps()[0]
+    : initializeApp(serviceAccount
+      ? { credential: cert(JSON.parse(serviceAccount)) }
+      : { credential: applicationDefault() });
+  firebaseAuth = getAuth(firebaseApp);
+} catch (error) {
+  console.error('[Auth] Firebase Admin initialization failed:', getErrorMessage(error));
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: DecodedIdToken;
+    }
+  }
+}
+
+async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (!firebaseAuth) {
+    res.status(503).json({ error: 'Authentication is not configured on the server' });
+    return;
+  }
+  const authorization = req.header('authorization');
+  const token = authorization?.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
+  if (!token) {
+    res.status(401).json({ error: 'A Firebase ID token is required' });
+    return;
+  }
+  try {
+    req.user = await firebaseAuth.verifyIdToken(token);
+    next();
+  } catch (error) {
+    console.warn('[Auth] Rejected invalid Firebase ID token:', getErrorMessage(error));
+    res.status(401).json({ error: 'Invalid or expired Firebase ID token' });
+  }
+}
+
+function requireOperator(req: Request, res: Response, next: NextFunction): void {
+  const emailAllowlist = (process.env.CHRONOS_OPERATOR_EMAILS || '')
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean);
+  const isOperatorClaim = req.user?.admin === true || req.user?.operator === true;
+  const isAllowedEmail = !!req.user?.email && emailAllowlist.includes(req.user.email.toLowerCase());
+  if (!isOperatorClaim && !isAllowedEmail) {
+    res.status(403).json({ error: 'Operator authorization is required' });
+    return;
+  }
+  next();
+}
+
+const authenticated = [requireAuth];
+const operatorOnly = [requireAuth, requireOperator];
 
 const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
 const ai = geminiApiKey
@@ -266,14 +330,14 @@ app.get('/api/engine/status', (req, res) => {
   });
 });
 
-app.post('/api/engine/start', (req, res) => {
+app.post('/api/engine/start', ...operatorOnly, (req, res) => {
   const rate = parsePositiveInteger(req.body?.rate, DEFAULT_ENGINE_RATE);
   const symbol = normalizeSymbol(req.body?.symbol);
   const result = startPythonEngine(rate, symbol);
   res.json(result);
 });
 
-app.post('/api/engine/stop', (req, res) => {
+app.post('/api/engine/stop', ...operatorOnly, (req, res) => {
   const processToStop = pythonProcess;
   if (processToStop) {
     try {
@@ -292,11 +356,21 @@ app.post('/api/engine/stop', (req, res) => {
   }
 });
 
-app.post('/api/engine/command', (req, res) => {
+app.post('/api/engine/command', ...operatorOnly, (req, res) => {
   if (!pythonProcess || !pythonProcess.stdin) {
     return res.status(400).json({ error: 'Engine not running' });
   }
+  const allowedActions = new Set(['inject', 'set_rate', 'toggle_burst']);
   const cmd = req.body;
+  if (!cmd || typeof cmd !== 'object' || !allowedActions.has(cmd.action)) {
+    return res.status(400).json({ error: 'Unsupported engine command' });
+  }
+  if (cmd.action === 'set_rate' && (!Number.isInteger(cmd.rate) || cmd.rate < 1 || cmd.rate > 1_000_000)) {
+    return res.status(400).json({ error: 'Engine rate must be an integer between 1 and 1000000' });
+  }
+  if (cmd.action === 'inject' && (!['BUY', 'SELL'].includes(cmd.side) || !Number.isFinite(cmd.price) || !Number.isInteger(cmd.quantity) || cmd.quantity < 1 || cmd.quantity > 100_000)) {
+    return res.status(400).json({ error: 'Invalid order injection payload' });
+  }
   try {
     pythonProcess.stdin.write(JSON.stringify(cmd) + '\n');
   } catch (error) {
@@ -306,7 +380,7 @@ app.post('/api/engine/command', (req, res) => {
   res.json({ status: 'command_sent', cmd });
 });
 
-app.get('/api/paper/state', (req, res) => {
+app.get('/api/paper/state', ...authenticated, (req, res) => {
   const requestedSymbol = normalizeSymbol(req.query.symbol, normalizeSymbol(latestTelemetry?.symbol));
   const quote = getPaperQuote(requestedSymbol);
   res.json({
@@ -315,7 +389,7 @@ app.get('/api/paper/state', (req, res) => {
   });
 });
 
-app.post('/api/paper/orders', (req, res) => {
+app.post('/api/paper/orders', ...authenticated, (req, res) => {
   const symbol = normalizeSymbol(req.body?.symbol, normalizeSymbol(latestTelemetry?.symbol));
   const side = req.body?.side === 'SELL' ? 'SELL' : req.body?.side === 'BUY' ? 'BUY' : null;
   const type = req.body?.type === 'LIMIT' ? 'LIMIT' : req.body?.type === 'MARKET' ? 'MARKET' : null;
@@ -335,23 +409,20 @@ app.post('/api/paper/orders', (req, res) => {
   return res.status(order.status === 'REJECTED' ? 409 : 200).json({ order });
 });
 
-app.post('/api/paper/orders/:id/cancel', (req, res) => {
+app.post('/api/paper/orders/:id/cancel', ...authenticated, (req, res) => {
   const order = paperTrading.cancelOrder(req.params.id);
   if (!order) return res.status(404).json({ error: 'Open paper order not found' });
   return res.json({ order });
 });
 
-app.post('/api/paper/controls', (req, res) => {
+app.post('/api/paper/controls', ...operatorOnly, (req, res) => {
   if (typeof req.body?.killSwitch === 'boolean') {
     paperTrading.setKillSwitch(req.body.killSwitch);
-  }
-  if (req.body?.limits && typeof req.body.limits === 'object') {
-    paperTrading.setLimits(req.body.limits);
   }
   return res.json({ state: paperTrading.getState({}) });
 });
 
-app.post('/api/paper/reset', (req, res) => {
+app.post('/api/paper/reset', ...operatorOnly, (req, res) => {
   paperTrading.reset();
   return res.json({ state: paperTrading.getState({}) });
 });
@@ -452,18 +523,21 @@ finally:
   });
 });
 
-app.post('/api/gemini/chat', async (req, res) => {
+app.post('/api/gemini/chat', ...authenticated, async (req, res) => {
   try {
     const {
       messages,
       model = 'gemini-3.8-flash',
-      useSearch = true,
-      systemInstruction
+      useSearch = true
     } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'Messages array is required' });
     }
+    if (messages.length > 40 || messages.some((message: any) => !message || typeof message.content !== 'string' || message.content.length > 12_000)) {
+      return res.status(400).json({ error: 'Messages exceed the allowed size' });
+    }
+    const requestedModel = typeof model === 'string' && ALLOWED_GEMINI_MODELS.has(model) ? model : 'gemini-3.8-flash';
 
     const contents = messages.map((m: any) => ({
       role: m.role === 'assistant' ? 'model' : m.role,
@@ -471,16 +545,7 @@ app.post('/api/gemini/chat', async (req, res) => {
     }));
 
     const config: any = {
-      systemInstruction: systemInstruction || `You are Chronos AI, an elite Quantitative Analyst and Ultra-Low-Latency Systems Architect embedded within the ChronosMatch High-Frequency Trading Engine.
-You specialize in:
-- High-Frequency Trading (HFT) and sub-50 microsecond execution architectures.
-- Limit Order Books (LOB), Price-Time Priority matching, FIFO queues, and queue position dynamics.
-- Zero-copy shared memory IPC using POSIX mmap, lock-free ring buffers, cache-line padding, and atomic cursors.
-- Hardware optimizations: CPU core pinning, isolcpus, hugepages, NUMA locality, and Solarflare OpenOnload kernel bypass.
-- Market microstructure: liquidity sweeps, iceberg orders, institutional whale detection, spread dynamics, and earnings volatility.
-- Up-to-date market intelligence, macro trends, and asset analysis using Google Search Grounding.
-
-Deliver responses with mathematical precision, actionable trade/engineering insights, and citations when grounded search data is retrieved.`,
+      systemInstruction: defaultSystemInstruction,
     };
 
     if (useSearch) {
@@ -488,7 +553,7 @@ Deliver responses with mathematical precision, actionable trade/engineering insi
     }
 
     let response;
-    let actualModel = model || 'gemini-3.8-flash';
+    let actualModel = requestedModel;
     try {
       response = await getGeminiClient().models.generateContent({
         model: actualModel,
@@ -544,7 +609,7 @@ Deliver responses with mathematical precision, actionable trade/engineering insi
 });
 
 // RAG Knowledge Base Endpoints
-app.get('/api/rag/documents', (req, res) => {
+app.get('/api/rag/documents', ...authenticated, (req, res) => {
   try {
     const docs = getAllDocuments();
     res.json({
@@ -557,7 +622,7 @@ app.get('/api/rag/documents', (req, res) => {
   }
 });
 
-app.post('/api/rag/documents', (req, res) => {
+app.post('/api/rag/documents', ...authenticated, (req, res) => {
   try {
     const { title, category, tags, content, sourceDoc } = req.body;
     if (!title || !content) {
@@ -576,7 +641,7 @@ app.post('/api/rag/documents', (req, res) => {
   }
 });
 
-app.post('/api/rag/query', async (req, res) => {
+app.post('/api/rag/query', ...authenticated, async (req, res) => {
   const startTime = Date.now();
   try {
     const {
@@ -589,6 +654,10 @@ app.post('/api/rag/query', async (req, res) => {
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ error: 'Query string is required' });
     }
+    if (query.length > 8_000) {
+      return res.status(400).json({ error: 'Query exceeds the allowed size' });
+    }
+    const requestedModel = typeof model === 'string' && ALLOWED_GEMINI_MODELS.has(model) ? model : 'gemini-3.8-flash';
 
     // 1. Semantic Retrieval across Knowledge Base
     const retrievals = searchKnowledgeBase(query, Math.min(6, Math.max(1, topK)));
@@ -621,7 +690,7 @@ GROUNDING RULES:
     ];
 
     let response;
-    let actualModel = model || 'gemini-3.8-flash';
+    let actualModel = requestedModel;
     try {
       response = await getGeminiClient().models.generateContent({
         model: actualModel,

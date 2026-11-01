@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiUrl } from '../api';
+import { apiFetch } from '../api';
 import {
   Brain,
   Search,
@@ -88,7 +88,7 @@ export const QuantRAGStudio: React.FC = () => {
   // Load knowledge corpus
   const fetchDocuments = async () => {
     try {
-      const res = await fetch(apiUrl('/api/rag/documents'));
+      const res = await apiFetch('/api/rag/documents');
       const data = await res.json();
       if (data.documents) {
         setDocuments(data.documents);
@@ -110,7 +110,7 @@ export const QuantRAGStudio: React.FC = () => {
     setErrorMsg(null);
 
     try {
-      const res = await fetch(apiUrl('/api/rag/query'), {
+      const res = await apiFetch('/api/rag/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -140,7 +140,7 @@ export const QuantRAGStudio: React.FC = () => {
 
     try {
       const tagsArray = newTags.split(',').map(t => t.trim()).filter(Boolean);
-      const res = await fetch(apiUrl('/api/rag/documents'), {
+      const res = await apiFetch('/api/rag/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

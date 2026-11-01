@@ -16,7 +16,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { apiUrl } from '../api';
+import { apiFetch } from '../api';
 
 interface ChatMessage {
   id: string;
@@ -95,7 +95,7 @@ I am wired directly to the ChronosMatch matching telemetry and backed by **Googl
         content: m.content
       }));
 
-      const res = await fetch(apiUrl('/api/gemini/chat'), {
+      const res = await apiFetch('/api/gemini/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

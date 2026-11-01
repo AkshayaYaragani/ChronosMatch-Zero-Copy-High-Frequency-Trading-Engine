@@ -30,7 +30,7 @@ import { SidebarNavigation, NavTabId } from './components/SidebarNavigation';
 import { testConnection, auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useTheme } from './context/ThemeContext';
-import { apiUrl } from './api';
+import { apiFetch, apiUrl } from './api';
 import {
   Layers,
   Activity,
@@ -149,10 +149,10 @@ export default function App() {
 
   const handleToggleEngine = async () => {
     if (isRunning) {
-      await fetch(apiUrl('/api/engine/stop'), { method: 'POST' });
+      await apiFetch('/api/engine/stop', { method: 'POST' });
       setIsRunning(false);
     } else {
-      const res = await fetch(apiUrl('/api/engine/start'), {
+      const res = await apiFetch('/api/engine/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rate: targetRate })
@@ -165,7 +165,7 @@ export default function App() {
 
   const handleSetRate = async (rate: number) => {
     setTargetRate(rate);
-    await fetch(apiUrl('/api/engine/command'), {
+    await apiFetch('/api/engine/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'set_rate', rate })
@@ -174,7 +174,7 @@ export default function App() {
 
   const handleToggleBurst = async () => {
     setBurstMode(!burstMode);
-    await fetch(apiUrl('/api/engine/command'), {
+    await apiFetch('/api/engine/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'toggle_burst' })
@@ -182,7 +182,7 @@ export default function App() {
   };
 
   const handleInjectWhale = async () => {
-    await fetch(apiUrl('/api/engine/command'), {
+    await apiFetch('/api/engine/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -197,7 +197,7 @@ export default function App() {
   };
 
   const handleManualOrderInject = async (order: any) => {
-    await fetch(apiUrl('/api/engine/command'), {
+    await apiFetch('/api/engine/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -108,6 +108,16 @@ The desk also provides searchable and status-filtered order history, fill and
 rejection summary metrics, and an **EXPORT CSV** action for offline review or
 strategy analysis.
 
+### Security configuration
+
+The server protects engine controls, paper-trading actions, RAG, and Gemini
+routes with Firebase ID-token verification. Configure Firebase Admin
+credentials with `FIREBASE_SERVICE_ACCOUNT_JSON` or application default
+credentials, and set `CHRONOS_OPERATOR_EMAILS` to a comma-separated list of
+trusted operator emails. Users must sign in through Firebase before using
+protected features; engine controls and paper risk controls additionally
+require an operator claim or allowlisted email.
+
 If port 3000 is already being used, the server automatically tries the next
 available port and prints the actual URL in the terminal.
 
