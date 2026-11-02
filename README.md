@@ -141,6 +141,13 @@ trusted operator emails. Users must sign in through Firebase before using
 protected features; engine controls and paper risk controls additionally
 require an operator claim or allowlisted email.
 
+The Firebase service account used by the backend must belong to the same
+Firebase project as `firebase-applet-config.json` (`gen-lang-client-0587025592`
+in this deployment). The frontend retries once with a forced token refresh
+when the backend returns HTTP 401, then signs out and reopens login if the
+token remains invalid. On Render, set `FIREBASE_SERVICE_ACCOUNT_JSON` to the
+JSON service-account key for that exact project.
+
 If port 3000 is already being used, the server automatically tries the next
 available port and prints the actual URL in the terminal.
 
