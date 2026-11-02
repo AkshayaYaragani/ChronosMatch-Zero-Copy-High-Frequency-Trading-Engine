@@ -37,40 +37,36 @@ export const TraderLoginModal: React.FC<TraderLoginModalProps> = ({
   const handleInstantTraderLogin = async (deskName: string, role: string) => {
     setLoading(true);
     setErrorMsg(null);
+    setSuccessMsg(null);
     try {
-      // Attempt anonymous auth or custom institutional profile
-      let uid = 'trader_' + Math.random().toString(36).substring(2, 9);
-      try {
-        const userCred = await signInAnonymously(auth);
-        uid = userCred.user.uid;
-        await updateProfile(userCred.user, {
-          displayName: deskName
-        });
-      } catch (authErr) {
-        console.warn('Firebase anonymous auth fallback note:', authErr);
-      }
+      const userCred = await signInAnonymously(auth);
+      const uid = userCred.user.uid;
+      await updateProfile(userCred.user, {
+        displayName: deskName
+      });
 
       // Sync to Firestore users collection
-      try {
-        await setDoc(doc(db, 'users', uid), {
-          userId: uid,
-          displayName: deskName,
-          email: `${deskName.toLowerCase().replace(/\s+/g, '.') || 'trader'}@chronosmatch.internal`,
-          role,
-          firm: 'Citadel Securities / Chronos Institutional',
-          whaleThreshold: 5000,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (dbErr) {
-        console.warn('Firestore profile sync note:', dbErr);
-      }
+      await setDoc(doc(db, 'users', uid), {
+        userId: uid,
+        displayName: deskName,
+        email: `${deskName.toLowerCase().replace(/\s+/g, '.') || 'trader'}@chronosmatch.internal`,
+        role,
+        firm: 'Citadel Securities / Chronos Institutional',
+        whaleThreshold: 5000,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
 
       setSuccessMsg(`Authenticated as ${deskName}! Main board unlocked.`);
       setTimeout(() => {
         onClose();
       }, 700);
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Login encounter an issue. Main board remains accessible.');
+      console.error('Instant Firebase Sign-In error:', err);
+      if (err?.code === 'auth/operation-not-allowed') {
+        setErrorMsg('Anonymous Firebase sign-in is disabled. Enable Anonymous under Firebase Console > Authentication > Sign-in method, or use Google Login.');
+      } else {
+        setErrorMsg(err?.message || 'Firebase sign-in failed. Please try Google Login.');
+      }
     } finally {
       setLoading(false);
     }

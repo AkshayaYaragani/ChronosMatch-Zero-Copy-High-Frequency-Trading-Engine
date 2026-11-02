@@ -64,6 +64,12 @@ production deployment, add
 development). Also enable the **Google** provider under
 **Authentication > Sign-in method**.
 
+The Instant Institutional Trader button uses Firebase Anonymous Authentication
+to obtain a real ID token. Enable the **Anonymous** provider under
+**Authentication > Sign-in method** as well. If it is disabled, the UI now
+reports the configuration issue and does not continue with an unauthenticated
+fallback.
+
 ### 4. Start the development server
 
 Run:
