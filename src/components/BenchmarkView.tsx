@@ -1,11 +1,33 @@
 import React, { useState } from 'react';
-import { Play, Activity, Cpu, ShieldAlert, CheckCircle2, ArrowUpRight, BarChart3, RefreshCw } from 'lucide-react';
+import { Play, Activity, CheckCircle2, BarChart3, Download, RefreshCw, TrendingUp } from 'lucide-react';
 import { apiUrl } from '../api';
+
+interface BenchmarkResult {
+  mode: string;
+  num_orders: number;
+  total_time_sec: number;
+  throughput_ops_sec: number;
+  ingest_time_sec: number;
+  match_time_sec: number;
+  p50_us: number;
+  p90_us: number;
+  p99_us: number;
+  p99_9_us?: number;
+  gc_collections: number;
+  zero_copy: boolean;
+}
+
+interface BenchmarkRun {
+  completedAt: string;
+  benchmarkSummary: Record<string, string | number | boolean>;
+  results: BenchmarkResult[];
+}
 
 export const BenchmarkView: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [orderCount, setOrderCount] = useState(25000);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<BenchmarkRun | null>(null);
+  const [history, setHistory] = useState<BenchmarkRun[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleRunBenchmark = async () => {
@@ -21,7 +43,13 @@ export const BenchmarkView: React.FC = () => {
         throw new Error(`Benchmark execution failed (${res.status})`);
       }
       const data = await res.json();
-      setResults(data);
+      const run = {
+        completedAt: new Date().toISOString(),
+        benchmarkSummary: data.benchmark_summary,
+        results: data.results
+      } as BenchmarkRun;
+      setResults(run);
+      setHistory(previous => [run, ...previous].slice(0, 8));
     } catch (err: any) {
       setError(err.message || 'Benchmark error');
     } finally {
@@ -36,8 +64,34 @@ export const BenchmarkView: React.FC = () => {
     }
   }, []);
 
-  const benchmarkSummary = results?.benchmark_summary;
+  const benchmarkSummary = results?.benchmarkSummary;
   const runs = results?.results || [];
+  const zeroCopyRun = runs.find(run => run.zero_copy);
+  const maxThroughput = Math.max(...runs.map(run => run.throughput_ops_sec), 1);
+  const maxLatency = Math.max(...runs.map(run => run.p99_us), 1);
+
+  const downloadCsv = () => {
+    if (!results) return;
+    const header = 'mode,orders,throughput_ops_sec,p50_us,p90_us,p99_us,p99_9_us,total_time_sec,gc_collections';
+    const rows = results.results.map(run => [
+      run.mode,
+      run.num_orders,
+      run.throughput_ops_sec,
+      run.p50_us,
+      run.p90_us,
+      run.p99_us,
+      run.p99_9_us ?? '',
+      run.total_time_sec,
+      run.gc_collections
+    ].join(','));
+    const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `chronosmatch-benchmark-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-4 font-mono">
@@ -89,6 +143,15 @@ export const BenchmarkView: React.FC = () => {
                 </>
               )}
             </button>
+            <button
+              onClick={downloadCsv}
+              disabled={!results || isRunning}
+              title="Download the latest benchmark as CSV"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-[#131722] text-[#8ca0b4] border border-[#2a2e39] hover:text-slate-100 hover:border-[#4a5b74] transition-all disabled:opacity-40"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>EXPORT CSV</span>
+            </button>
           </div>
         </div>
 
@@ -132,13 +195,73 @@ export const BenchmarkView: React.FC = () => {
             <span className="text-[10px] text-[#64748b] uppercase tracking-wider block">GC Stop-The-World Spikes</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-bold text-[#bfa46f]">
-                0
+                {zeroCopyRun?.gc_collections ?? '-'}
               </span>
               <span className="text-xs text-[#64748b]">Pauses in Hot Loop</span>
             </div>
             <p className="text-[10px] text-[#7da98f] mt-0.5 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Preallocated C-structs buffer
+              <CheckCircle2 className="w-3 h-3" /> Measured by the Python GC counter
             </p>
+          </div>
+        </div>
+      )}
+
+      {zeroCopyRun && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          <div className="bg-[#1c2030] border border-[#2a2e39] rounded-lg p-4 shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">Throughput comparison</h3>
+                <p className="text-[10px] text-[#64748b] mt-1">Higher is better · orders processed per second</p>
+              </div>
+              <TrendingUp className="w-4 h-4 text-[#7da98f]" />
+            </div>
+            <div className="space-y-3">
+              {runs.map(run => (
+                <div key={run.mode}>
+                  <div className="flex justify-between text-[10px] mb-1">
+                    <span className="text-[#8ca0b4]">{run.mode}</span>
+                    <span className={run.zero_copy ? 'text-[#7da98f] font-bold' : 'text-slate-300'}>
+                      {run.throughput_ops_sec.toLocaleString()} ops/s
+                    </span>
+                  </div>
+                  <div className="h-2 rounded bg-[#131722] overflow-hidden">
+                    <div
+                      className={`h-full rounded ${run.zero_copy ? 'bg-[#5b9a78]' : 'bg-[#64748b]'}`}
+                      style={{ width: `${Math.max(2, (run.throughput_ops_sec / maxThroughput) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-[#1c2030] border border-[#2a2e39] rounded-lg p-4 shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">Latency distribution</h3>
+                <p className="text-[10px] text-[#64748b] mt-1">Tail behavior matters · lower is better</p>
+              </div>
+              <BarChart3 className="w-4 h-4 text-[#8ca0b4]" />
+            </div>
+            <div className="space-y-3">
+              {runs.map(run => (
+                <div key={run.mode} className="grid grid-cols-[minmax(90px,1fr)_2fr] items-center gap-3">
+                  <span className="text-[10px] text-[#8ca0b4] truncate">{run.mode}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded bg-[#131722] overflow-hidden">
+                      <div
+                        className={`h-full rounded ${run.zero_copy ? 'bg-[#8ca0b4]' : 'bg-[#bfa46f]'}`}
+                        style={{ width: `${Math.max(2, (run.p99_us / maxLatency) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-300 w-20 text-right">
+                      p50 {run.p50_us} / p99 {run.p99_us} µs
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -225,6 +348,45 @@ export const BenchmarkView: React.FC = () => {
           );
         })}
       </div>
+
+      {history.length > 0 && (
+        <div className="bg-[#1c2030] border border-[#2a2e39] rounded-lg p-4 shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">Run history</h3>
+              <p className="text-[10px] text-[#64748b] mt-1">Use repeated runs to discuss variance instead of quoting one best result.</p>
+            </div>
+            <Activity className="w-4 h-4 text-[#64748b]" />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[10px]">
+              <thead className="text-[#64748b] uppercase border-b border-[#2a2e39]">
+                <tr>
+                  <th className="text-left py-2 font-normal">Completed</th>
+                  <th className="text-right py-2 font-normal">Orders</th>
+                  <th className="text-right py-2 font-normal">Zero-copy ops/s</th>
+                  <th className="text-right py-2 font-normal">p50</th>
+                  <th className="text-right py-2 font-normal">p99</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map(run => {
+                  const runZeroCopy = run.results.find(item => item.zero_copy);
+                  return (
+                    <tr key={run.completedAt} className="border-b border-[#242b3a] last:border-0">
+                      <td className="py-2 text-[#8ca0b4]">{new Date(run.completedAt).toLocaleTimeString()}</td>
+                      <td className="py-2 text-right text-slate-300">{runZeroCopy?.num_orders.toLocaleString() ?? '-'}</td>
+                      <td className="py-2 text-right text-[#7da98f] font-semibold">{runZeroCopy?.throughput_ops_sec.toLocaleString() ?? '-'} </td>
+                      <td className="py-2 text-right text-slate-300">{runZeroCopy ? `${runZeroCopy.p50_us} µs` : '-'}</td>
+                      <td className="py-2 text-right text-slate-300">{runZeroCopy ? `${runZeroCopy.p99_us} µs` : '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

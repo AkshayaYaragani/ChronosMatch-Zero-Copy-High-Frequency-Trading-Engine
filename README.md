@@ -108,6 +108,15 @@ The desk also provides searchable and status-filtered order history, fill and
 rejection summary metrics, and an **EXPORT CSV** action for offline review or
 strategy analysis.
 
+### Latency and throughput benchmark
+
+The **Zero-Copy Benchmark** tab runs the same order workload through the
+memory-mapped ring-buffer path, Pickle IPC, and JSON serialization. It reports
+throughput, total and phase timings, p50/p90/p99/p99.9 latency, and measured
+Python garbage-collection counts. The dashboard keeps the latest eight runs
+for variance comparison and can export the latest comparison as CSV for
+offline review.
+
 ### Security configuration
 
 The server protects engine controls, paper-trading actions, RAG, and Gemini
