@@ -70,6 +70,10 @@ to obtain a real ID token. Enable the **Anonymous** provider under
 reports the configuration issue and does not continue with an unauthenticated
 fallback.
 
+Protected panels automatically open the Trader Login dialog when an
+authentication-required action is attempted. This includes paper trading,
+operator controls, RAG, and Gemini requests.
+
 ### 4. Start the development server
 
 Run:

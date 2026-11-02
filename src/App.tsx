@@ -92,6 +92,12 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    const handleAuthRequired = () => setIsLoginModalOpen(true);
+    window.addEventListener('chronos-auth-required', handleAuthRequired);
+    return () => window.removeEventListener('chronos-auth-required', handleAuthRequired);
+  }, []);
+
   // Validate connection to Firestore on initial boot
   useEffect(() => {
     testConnection();

@@ -10,7 +10,8 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   await auth.authStateReady();
   const user = auth.currentUser;
   if (!user) {
-    throw new Error('Sign in with Firebase before using this protected feature.');
+    window.dispatchEvent(new CustomEvent('chronos-auth-required'));
+    throw new Error('Firebase sign-in is required. The login dialog has been opened.');
   }
   const token = await user.getIdToken();
   const headers = new Headers(init.headers);
