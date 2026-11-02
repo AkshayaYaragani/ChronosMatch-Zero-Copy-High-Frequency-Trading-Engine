@@ -97,9 +97,26 @@ export const TraderLoginModal: React.FC<TraderLoginModalProps> = ({
       if (err.code === 'auth/popup-blocked') {
         setErrorMsg('Browser popup was blocked. Please use Instant Institutional Trader access below.');
       } else if (err.code === 'auth/unauthorized-domain') {
-        setErrorMsg(
-          `Google Login is not enabled for ${window.location.hostname}. Add this hostname to Firebase Console > Authentication > Settings > Authorized domains, then retry.`
-        );
+        try {
+          const anonymousUser = await signInAnonymously(auth);
+          await updateProfile(anonymousUser.user, { displayName: 'Local Quant Trader' });
+          await setDoc(doc(db, 'users', anonymousUser.user.uid), {
+            userId: anonymousUser.user.uid,
+            displayName: 'Local Quant Trader',
+            role: 'trader',
+            environment: 'local',
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+          setSuccessMsg('Google is not enabled for this hostname. Signed in with Firebase Anonymous Authentication for local testing.');
+          setTimeout(() => {
+            onClose();
+          }, 900);
+        } catch (fallbackError: any) {
+          console.error('Anonymous Firebase fallback failed:', fallbackError);
+          setErrorMsg(
+            `Google Login is not enabled for ${window.location.hostname}. Add this hostname under Firebase Console > Authentication > Settings > Authorized domains. For local fallback, also enable Anonymous under Authentication > Sign-in method.`
+          );
+        }
       } else {
         setErrorMsg(err.message || 'Popup closed or blocked. Try Instant Trader Access.');
       }

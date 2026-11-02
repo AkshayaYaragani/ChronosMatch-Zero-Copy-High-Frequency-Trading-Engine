@@ -74,6 +74,10 @@ Protected panels automatically open the Trader Login dialog when an
 authentication-required action is attempted. This includes paper trading,
 operator controls, RAG, and Gemini requests.
 
+If Google sign-in rejects a local hostname, the Google button automatically
+falls back to Firebase Anonymous Authentication for local testing. The
+hostname still needs to be added to Authorized domains to use Google accounts.
+
 ### 4. Start the development server
 
 Run:
