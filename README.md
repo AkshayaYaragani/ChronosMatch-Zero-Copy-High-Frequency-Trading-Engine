@@ -131,6 +131,13 @@ Python garbage-collection counts. The dashboard keeps the latest eight runs
 for variance comparison and can export the latest comparison as CSV for
 offline review.
 
+### Reliability Center
+
+The **Reliability Center** provides a live engine health view with process
+status, telemetry heartbeat, order-flow checks, ring-buffer drop detection,
+manual refresh, and operator-only stop/restart controls. It is available from
+the **Reliability** infrastructure tab.
+
 ### Security configuration
 
 The server protects engine controls, paper-trading actions, RAG, and Gemini

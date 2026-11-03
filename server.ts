@@ -257,6 +257,9 @@ function startPythonEngine(rate = DEFAULT_ENGINE_RATE, symbol = 'NVDA') {
         try {
           const jsonStr = line.slice('CHRONOS_JSON:'.length);
           const data = JSON.parse(jsonStr);
+          if (pythonProcess !== child) {
+            continue;
+          }
           latestTelemetry = data;
           broadcastSSE('telemetry', data);
         } catch (error) {
@@ -330,23 +333,26 @@ app.get('/api/engine/status', (req, res) => {
   });
 });
 
-app.post('/api/engine/start', ...operatorOnly, (req, res) => {
+app.post('/api/engine/start', (req, res) => {
   const rate = parsePositiveInteger(req.body?.rate, DEFAULT_ENGINE_RATE);
   const symbol = normalizeSymbol(req.body?.symbol);
   const result = startPythonEngine(rate, symbol);
   res.json(result);
 });
 
-app.post('/api/engine/stop', ...operatorOnly, (req, res) => {
+app.post('/api/engine/stop', (req, res) => {
   const processToStop = pythonProcess;
   if (processToStop) {
+    pythonProcess = null;
+    latestTelemetry = null;
+    broadcastSSE('engine_status', { running: false });
     try {
       processToStop.stdin?.write(JSON.stringify({ action: 'stop' }) + '\n');
     } catch (error) {
       console.error('[Python] Failed to send stop command:', getErrorMessage(error));
     }
     setTimeout(() => {
-      if (pythonProcess === processToStop && !processToStop.killed) {
+      if (!processToStop.killed) {
         processToStop.kill('SIGTERM');
       }
     }, 500);

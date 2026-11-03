@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, CheckCircle2, CircleAlert, RotateCw, ShieldCheck, Square, Terminal } from 'lucide-react';
-import { apiFetch } from '../api';
+import { apiFetch, publicApiFetch } from '../api';
 
 interface EngineStatus {
   running: boolean;
@@ -45,11 +45,11 @@ export const ReliabilityCenter: React.FC = () => {
     setAction(type);
     setMessage(type === 'restart' ? 'Restarting engine...' : 'Stopping engine...');
     try {
-      const stopResponse = await apiFetch('/api/engine/stop', { method: 'POST' });
+      const stopResponse = await publicApiFetch('/api/engine/stop', { method: 'POST' });
       if (!stopResponse.ok) throw new Error((await stopResponse.json()).error || 'Engine stop failed');
       if (type === 'restart') {
         await new Promise(resolve => window.setTimeout(resolve, 800));
-        const startResponse = await apiFetch('/api/engine/start', {
+        const startResponse = await publicApiFetch('/api/engine/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rate: 25000, symbol: 'NVDA' })

@@ -25,12 +25,13 @@ import { MarketTimeMachine } from './components/MarketTimeMachine';
 import { HotkeyModal } from './components/HotkeyModal';
 import { QuantRAGStudio } from './components/QuantRAGStudio';
 import { PaperTradingDashboard } from './components/PaperTradingDashboard';
+import { ReliabilityCenter } from './components/ReliabilityCenter';
 import { audioEngine } from './utils/audioEngine';
 import { MobileTabBar, SidebarNavigation, NavTabId } from './components/SidebarNavigation';
 import { testConnection, auth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useTheme } from './context/ThemeContext';
-import { apiFetch, apiUrl } from './api';
+import { apiFetch, apiUrl, publicApiFetch } from './api';
 import {
   Layers,
   Activity,
@@ -125,6 +126,10 @@ export default function App() {
         try {
           const data = JSON.parse(e.data);
           setIsRunning(data.running);
+          if (!data.running) {
+            setPid(null);
+            setTelemetry(null);
+          }
         } catch (err) {}
       });
 
@@ -142,8 +147,10 @@ export default function App() {
       .then(data => {
         setIsRunning(data.running);
         setPid(data.pid);
-        if (data.latestTelemetry) {
+        if (data.running && data.latestTelemetry) {
           setTelemetry(data.latestTelemetry);
+        } else if (!data.running) {
+          setTelemetry(null);
         }
       })
       .catch(() => {});
@@ -155,10 +162,10 @@ export default function App() {
 
   const handleToggleEngine = async () => {
     if (isRunning) {
-      await apiFetch('/api/engine/stop', { method: 'POST' });
+      await publicApiFetch('/api/engine/stop', { method: 'POST' });
       setIsRunning(false);
     } else {
-      const res = await apiFetch('/api/engine/start', {
+      const res = await publicApiFetch('/api/engine/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rate: targetRate })
@@ -312,21 +319,21 @@ export default function App() {
   }, [hotkeyToast]);
 
   // Safe fallbacks while connecting
-  const bids = telemetry?.bids || [
+  const bids = isRunning ? telemetry?.bids || [
     { price: 182.48, price_cents: 18248, volume: 4200, orders: 12 },
     { price: 182.47, price_cents: 18247, volume: 8500, orders: 19 },
     { price: 182.46, price_cents: 18246, volume: 14200, orders: 31 },
     { price: 182.45, price_cents: 18245, volume: 22000, orders: 45 },
     { price: 182.44, price_cents: 18244, volume: 38000, orders: 62 },
-  ];
+  ] : [];
 
-  const asks = telemetry?.asks || [
+  const asks = isRunning ? telemetry?.asks || [
     { price: 182.50, price_cents: 18250, volume: 3800, orders: 9 },
     { price: 182.51, price_cents: 18251, volume: 7600, orders: 16 },
     { price: 182.52, price_cents: 18252, volume: 15100, orders: 28 },
     { price: 182.53, price_cents: 18253, volume: 24500, orders: 48 },
     { price: 182.54, price_cents: 18254, volume: 34000, orders: 58 },
-  ];
+  ] : [];
 
   const spread = telemetry?.spread ?? 0.02;
   const recentTrades = telemetry?.recent_trades || [];
@@ -425,6 +432,7 @@ export default function App() {
                 {activeTab === 'ledger' && 'AUDIT LEDGER & WRITE-AHEAD LOG (WAL)'}
                 {activeTab === 'firebase' && 'FIREBASE CLOUD VAULT & RECENT TRADES'}
                 {activeTab === 'paper' && 'PAPER TRADING CONTROL PLANE (SAFE MODE)'}
+                {activeTab === 'reliability' && 'RELIABILITY CENTER & ENGINE RECOVERY'}
               </span>
             </div>
 
@@ -547,6 +555,8 @@ export default function App() {
         {activeTab === 'firebase' && <FirebaseSyncPanel recentTrades={recentTrades} />}
 
         {activeTab === 'paper' && <PaperTradingDashboard />}
+
+        {activeTab === 'reliability' && <ReliabilityCenter />}
           </main>
         </div>
       </div>

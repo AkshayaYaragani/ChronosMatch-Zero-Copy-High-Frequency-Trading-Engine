@@ -38,7 +38,8 @@ export type NavTabId =
   | 'benchmark'
   | 'ledger'
   | 'firebase'
-  | 'paper';
+  | 'paper'
+  | 'reliability';
 
 interface NavItem {
   id: NavTabId;
@@ -176,6 +177,16 @@ const NAV_ITEMS: NavItem[] = [
     badge: 'AUTH',
     category: 'INFRASTRUCTURE',
     color: 'text-emerald-400'
+  },
+  {
+    id: 'reliability',
+    label: 'Reliability Center',
+    shortLabel: 'Reliability',
+    icon: ShieldCheck,
+    hotkey: 'H',
+    badge: 'HEALTH',
+    category: 'INFRASTRUCTURE',
+    color: 'text-rose-400'
   }
 ];
 

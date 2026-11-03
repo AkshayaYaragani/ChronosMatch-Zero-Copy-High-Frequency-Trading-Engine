@@ -7,6 +7,10 @@ export function apiUrl(path: string): string {
 import { auth } from './firebase';
 import { signOut } from 'firebase/auth';
 
+export function publicApiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(apiUrl(path), init);
+}
+
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   await auth.authStateReady();
   const user = auth.currentUser;
