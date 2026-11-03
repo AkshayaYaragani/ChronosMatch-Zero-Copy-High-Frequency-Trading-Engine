@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, CheckCircle2, CircleAlert, RotateCw, ShieldCheck, Square, Terminal } from 'lucide-react';
 import { apiFetch, publicApiFetch } from '../api';
 
