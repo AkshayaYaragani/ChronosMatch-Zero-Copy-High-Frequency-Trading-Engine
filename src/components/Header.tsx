@@ -14,7 +14,8 @@ import {
   VolumeX,
   Keyboard,
   Menu,
-  PanelLeft
+  PanelLeft,
+  Download
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -38,6 +39,7 @@ interface HeaderProps {
   onOpenHotkeys?: () => void;
   onToggleMobileSidebar?: () => void;
   onToggleDesktopSidebar?: () => void;
+  onExportSnapshot?: () => void;
   isDesktopSidebarCollapsed?: boolean;
   user?: any;
 }
@@ -62,6 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenHotkeys,
   onToggleMobileSidebar,
   onToggleDesktopSidebar,
+  onExportSnapshot,
   isDesktopSidebarCollapsed,
   user
 }) => {
@@ -358,6 +361,22 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden xl:inline text-[11px] font-mono">
                 {isAudioMuted ? 'AUDIO OFF' : 'AUDIO ON'}
               </span>
+            </button>
+          )}
+
+          {/* Hotkey HUD Command Center */}
+          {onExportSnapshot && (
+            <button
+              onClick={onExportSnapshot}
+              className={`flex h-[32px] shrink-0 items-center gap-1.5 px-2 py-1.5 rounded text-xs font-semibold border transition ${
+                isDark
+                  ? 'bg-[#1c2030] border-[#2a2e39] text-[#8ca0b4] hover:bg-[#252d42] hover:text-slate-100'
+                  : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+              }`}
+              title="Download the current engine telemetry as JSON"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline text-[11px]">SNAPSHOT</span>
             </button>
           )}
 
