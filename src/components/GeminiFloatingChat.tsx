@@ -20,7 +20,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { apiFetch } from '../api';
+import { publicApiFetch } from '../api';
 
 interface ChatMessage {
   id: string;
@@ -115,7 +115,7 @@ I am connected live to **${currentSymbol}** order book telemetry and backed by *
         content: m.content
       }));
 
-      const res = await apiFetch('/api/gemini/chat', {
+      const res = await publicApiFetch('/api/gemini/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

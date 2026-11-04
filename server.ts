@@ -553,7 +553,7 @@ finally:
   });
 });
 
-app.post('/api/gemini/chat', ...authenticated, async (req, res) => {
+app.post('/api/gemini/chat', async (req, res) => {
   try {
     const {
       messages,
