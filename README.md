@@ -140,8 +140,10 @@ the **Reliability** infrastructure tab.
 
 ### Security configuration
 
-The server protects engine controls, paper-trading actions, RAG, and Gemini
-routes with Firebase ID-token verification. Configure Firebase Admin
+The server protects operator engine controls, paper-trading actions, RAG, and
+Gemini routes with Firebase ID-token verification. The dashboard's Earnings
+Shock and fixed Inject Whale simulation controls are intentionally available
+without login. Configure Firebase Admin
 credentials with `FIREBASE_SERVICE_ACCOUNT_JSON` or application default
 credentials, and set `CHRONOS_OPERATOR_EMAILS` to a comma-separated list of
 trusted operator emails. Users must sign in through Firebase before using

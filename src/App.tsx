@@ -187,7 +187,7 @@ export default function App() {
 
   const handleToggleBurst = async () => {
     setBurstMode(!burstMode);
-    await apiFetch('/api/engine/command', {
+    await publicApiFetch('/api/engine/simulation-command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'toggle_burst' })
@@ -195,7 +195,7 @@ export default function App() {
   };
 
   const handleInjectWhale = async () => {
-    await apiFetch('/api/engine/command', {
+    await publicApiFetch('/api/engine/simulation-command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

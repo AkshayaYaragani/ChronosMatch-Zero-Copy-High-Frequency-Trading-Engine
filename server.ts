@@ -362,6 +362,30 @@ app.post('/api/engine/stop', (req, res) => {
   }
 });
 
+app.post('/api/engine/simulation-command', (req, res) => {
+  if (!pythonProcess || !pythonProcess.stdin) {
+    return res.status(400).json({ error: 'Engine not running' });
+  }
+  const cmd = req.body;
+  const isWhaleInjection = cmd?.action === 'inject'
+    && cmd.price === 182.8
+    && cmd.quantity === 15000
+    && cmd.side === 'BUY'
+    && cmd.order_type === 'MARKET'
+    && cmd.is_whale === true;
+  const isBurstToggle = cmd?.action === 'toggle_burst';
+  if (!isWhaleInjection && !isBurstToggle) {
+    return res.status(400).json({ error: 'Unsupported simulation command' });
+  }
+  try {
+    pythonProcess.stdin.write(JSON.stringify(cmd) + '\n');
+  } catch (error) {
+    console.error('[Python] Failed to send simulation command:', getErrorMessage(error));
+    return res.status(503).json({ error: 'Simulation command could not be sent' });
+  }
+  res.json({ status: 'command_sent', cmd });
+});
+
 app.post('/api/engine/command', ...operatorOnly, (req, res) => {
   if (!pythonProcess || !pythonProcess.stdin) {
     return res.status(400).json({ error: 'Engine not running' });
